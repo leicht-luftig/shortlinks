@@ -6,6 +6,8 @@ const API_URL =
   process.env.PAYLOAD_API_URL ?? 'https://preview.spross.app/api/shortlinks';
 const API_SECRET = process.env.PAYLOAD_API_TOKEN ?? '';
 
+const PRESERVE_QUERY_PARAMS = process.env.PRESERVE_QUERY_PARAMS === 'true';
+
 async function fetchRedirects() {
   try {
     const res = await axios.get(API_URL, {
@@ -19,7 +21,15 @@ async function fetchRedirects() {
 }
 
 function generateRedirectsFile(redirects) {
-  const lines = redirects.map((link) => `/${link.code}  ${link.destination}  301`);
+  const lines = redirects.map((link) => {
+    if (link.stripQueryParams) {
+      // Do NOT forward query parameters
+      return `/${link.code}  ${link.destination}  301`;
+    } else {
+      // Forward query parameters (Netlify does this automatically)
+      return `/${link.code}  ${link.destination}  301!`;
+    }
+  });
   fs.mkdirSync('dist', { recursive: true });
   fs.writeFileSync('dist/_redirects', lines.join('\n'));
   // Print all generated redirects
